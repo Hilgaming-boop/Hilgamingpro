@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Step 3 - Download</title>
+<style>
+body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+#countdown { font-size: 24px; margin: 20px; }
+a#downloadBtn { display:none; padding: 12px 25px; font-size:18px; border:none; border-radius:6px; background:#007bff; color:white; text-decoration:none; cursor:pointer; }
+a#downloadBtn:hover { background:#0056b3; }
+.ad-box { margin: 20px auto; max-width: 400px; }
+</style>
+</head>
+<body>
+
+<h1>Step 3 - Download</h1>
+
+<div class="ad-box">
+<script async="async" data-cfasync="false" src="//valianttossczar.com/f88e74c0266ceb4df7979970050caf8b/invoke.js"></script>
+<div id="container-f88e74c0266ceb4df7979970050caf8b"></div>
+</div>
+
+<p>Wait <span id="count">10</span> seconds...</p>
+<a id="downloadBtn" target="_blank">Download</a>
+
+<script>
+let time = 10;
+const countdown = document.getElementById("count");
+const btn = document.getElementById("downloadBtn");
+const urlParams = new URLSearchParams(window.location.search);
+const id = urlParams.get('id') || 'default';
+
+// Map IDs to final download links
+const finalLinks = {
+    "FIFA16": "https://www.mediafire.com/file/xxxx/FIFA16.apk",
+    "FTS25": "https://www.mediafire.com/file/yyyy/FTS25.apk",
+    "PES21": "https://www.mediafire.com/file/zzzz/PES21.apk",
+    "DLS25": "https://www.mediafire.com/file/aaaa/DLS25.apk",
+    "MODX": "https://www.mediafire.com/file/bbbb/MODX.apk",
+    "default": "https://www.mediafire.com"
+};
+
+btn.href = finalLinks[id];
+
+const timer = setInterval(() => {
+    time--;
+    countdown.textContent = time;
+    if(time <= 0){
+        clearInterval(timer);
+        btn.style.display = 'inline-block';
+    }
+}, 1000);
+</script>
+
+</body>
+</html>
