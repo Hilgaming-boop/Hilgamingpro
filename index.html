@@ -2,51 +2,278 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Step 1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soccer Quiz Pro</title>
 <style>
-body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
-#countdown { font-size: 24px; margin: 20px; }
-button { display:none; padding: 12px 25px; font-size:18px; border:none; border-radius:6px; background:#28a745; color:white; cursor:pointer; }
-button:hover { background:#218838; }
-.ad-box { margin: 20px auto; max-width: 400px; }
+body {
+    margin:0;
+    font-family: Arial, sans-serif;
+    background-color: #111;
+    color:#fff;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    height:100vh;
+    overflow:hidden;
+    background-size:cover;
+    background-position:center;
+    transition: background 0.5s;
+}
+button {
+    margin:5px;
+    padding:12px 25px;
+    border:none;
+    border-radius:10px;
+    font-size:16px;
+    cursor:pointer;
+    transition:0.2s;
+}
+button:hover{transform:scale(1.05);}
+.active{display:flex;}
+.main-menu, .quiz-interface, .store-interface{width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;}
+.question-card{
+    background-color:#222;
+    padding:20px;
+    border-radius:15px;
+    width:90%;
+    max-width:400px;
+    text-align:center;
+    animation:fadeIn 0.5s;
+    position:relative;
+}
+.answers button{display:block;width:100%;margin:5px 0;}
+.store-item{
+    background-color:#333;
+    padding:15px;
+    margin:10px;
+    border-radius:10px;
+    cursor:pointer;
+    width:80%;
+    text-align:center;
+    transition:0.2s;
+}
+.store-item:hover{transform:scale(1.05);}
+@keyframes fadeIn {from{opacity:0;}to{opacity:1;}}
+.timer-bar{
+    height:10px;
+    background:#4caf50;
+    width:100%;
+    border-radius:5px;
+    margin-bottom:10px;
+    transition:width 0.2s linear;
+}
+.point-popup{
+    position:absolute;
+    top:-30px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:18px;
+    font-weight:bold;
+    animation:popUp 0.8s ease forwards;
+}
+@keyframes popUp{
+    0%{opacity:1;transform:translate(-50%,0);}
+    100%{opacity:0;transform:translate(-50%,-50px);}
+}
 </style>
-    <meta name="surfe.pro" content="cedf30ef71564a0328d84298e837c0e1"/>
 </head>
 <body>
 
-<h1>Step 1 of 3</h1>
-
-<div class="ad-box">
-<script async="async" data-cfasync="false" src="//valianttossczar.com/f88e74c0266ceb4df7979970050caf8b/invoke.js"></script>
-<div id="container-f88e74c0266ceb4df7979970050caf8b"></div>
+<!-- MAIN MENU -->
+<div class="main-menu active">
+    <h1>⚽ Soccer Quiz Pro ⚽</h1>
+    <button onclick="startQuiz('easy')">Play Easy</button>
+    <button onclick="startQuiz('medium')">Play Medium</button>
+    <button onclick="startQuiz('expert')">Play Expert</button>
+    <button onclick="openStore()">Template Store</button>
+    <div>Points: <span id="points">100</span></div>
 </div>
 
-<p>Wait <span id="count">10</span> seconds...</p>
-<button id="continueBtn">Continue</button>
-<script src="//static.surfe.pro/js/net.js"></script>
-<ins class="surfe-be" data-sid="415036"></ins>
-<script>(adsurfebe = window.adsurfebe || []).push({});</script>
-<script>
-let time = 10;
-const countdown = document.getElementById("count");
-const btn = document.getElementById("continueBtn");
-const urlParams = new URLSearchParams(window.location.search);
-const id = urlParams.get('id') || 'default';
+<!-- QUIZ INTERFACE -->
+<div class="quiz-interface">
+    <div class="question-card">
+        <div class="timer-bar" id="timerBar"></div>
+        <h2 id="question">Question text</h2>
+        <div class="answers">
+            <button onclick="answer(0)">Answer 1</button>
+            <button onclick="answer(1)">Answer 2</button>
+            <button onclick="answer(2)">Answer 3</button>
+            <button onclick="answer(3)">Answer 4</button>
+        </div>
+        <div>
+            <button onclick="skipQuestion()">Skip (-10 points)</button>
+            <button onclick="watchAd()">Watch Ad (+20 points)</button>
+        </div>
+        <div>Score: <span id="score">0</span></div>
+        <button onclick="exitQuiz()">Exit Quiz</button>
+    </div>
+</div>
 
-btn.onclick = () => {
-    window.open('https://11745.xml.4armn.com/direct-link?pubid=960688&siteid=[SITE_ID]', '_blank'); // Direct link
-    window.location.href = 'step2.html?id=' + id;
+<!-- STORE INTERFACE -->
+<div class="store-interface">
+    <h2>Template Store</h2>
+    <div class="store-item" onclick="buyTemplate('bg1')">Background 1 - 50 points</div>
+    <div class="store-item" onclick="buyTemplate('bg2')">Background 2 - 80 points</div>
+    <button onclick="backToMenu()">Back to Menu</button>
+</div>
+
+<audio id="correctSound" src="https://freesound.org/data/previews/320/320181_5260877-lq.mp3"></audio>
+<audio id="wrongSound" src="https://freesound.org/data/previews/109/109662_945474-lq.mp3"></audio>
+<audio id="timeUpSound" src="https://freesound.org/data/previews/331/331912_3248244-lq.mp3"></audio>
+
+<script>
+let points = 100;
+let score = 0;
+let currentQuestion = 0;
+let currentLevel = '';
+let templates = {};
+let timer;
+let timeLeft;
+const maxTime = 15;
+
+let questions = {
+    easy:[
+        {q:"Which country won the 2018 World Cup?", a:["Brazil","France","Germany","Argentina"], correct:1},
+        {q:"Who is CR7?", a:["Messi","Ronaldo","Neymar","Mbappe"], correct:1}
+    ],
+    medium:[
+        {q:"Most UEFA Champions League titles?", a:["Real Madrid","Barcelona","AC Milan","Liverpool"], correct:0},
+        {q:"Winning goal 2010 World Cup?", a:["Iniesta","Messi","Ronaldo","Xavi"], correct:0}
+    ],
+    expert:[
+        {q:"Most goals in single European season?", a:["Messi","Lewandowski","Cristiano","Neymar"], correct:0},
+        {q:"Which club founded first?", a:["Manchester United","Real Madrid","Juventus","AC Milan"], correct:3}
+    ]
 };
 
-const timer = setInterval(() => {
-    time--;
-    countdown.textContent = time;
-    if(time <= 0){
-        clearInterval(timer);
-        btn.style.display = 'inline-block';
-    }
-}, 1000);
-</script>
+// ===== START QUIZ =====
+function startQuiz(level){
+    currentLevel=level;
+    currentQuestion=0;
+    document.querySelector('.main-menu').classList.remove('active');
+    document.querySelector('.quiz-interface').classList.add('active');
+    score=0;
+    loadQuestion();
+}
 
+// ===== LOAD QUESTION =====
+function loadQuestion(){
+    clearInterval(timer);
+    timeLeft=maxTime;
+    document.getElementById('timerBar').style.width="100%";
+    timer=setInterval(updateTimer,1000);
+
+    let q=questions[currentLevel][currentQuestion];
+    document.getElementById('question').innerText=q.q;
+    q.a.forEach((ans,i)=>document.querySelectorAll('.answers button')[i].innerText=ans);
+}
+
+// ===== TIMER =====
+function updateTimer(){
+    timeLeft--;
+    document.getElementById('timerBar').style.width=(timeLeft/maxTime*100)+"%";
+    if(timeLeft<=0){
+        clearInterval(timer);
+        document.getElementById('timeUpSound').play();
+        deductPoints(getPenalty());
+        showPopup("-"+getPenalty());
+        nextQuestion();
+    }
+}
+
+// ===== ANSWER =====
+function answer(i){
+    clearInterval(timer);
+    let q=questions[currentLevel][currentQuestion];
+    if(i===q.correct){
+        score+=getReward();
+        showPopup("+"+getReward());
+        document.getElementById('correctSound').play();
+    }else{
+        deductPoints(getPenalty());
+        showPopup("-"+getPenalty());
+        document.getElementById('wrongSound').play();
+    }
+    document.getElementById('score').innerText=score;
+    nextQuestion();
+}
+
+// ===== POINT LOGIC =====
+function getReward(){if(currentLevel==='easy')return 10;if(currentLevel==='medium')return 20;if(currentLevel==='expert')return 30;}
+function getPenalty(){if(currentLevel==='easy')return 5;if(currentLevel==='medium')return 10;if(currentLevel==='expert')return 15;}
+function deductPoints(val){points=Math.max(0,points-val);document.getElementById('points').innerText=points;}
+
+// ===== NEXT QUESTION =====
+function nextQuestion(){
+    currentQuestion++;
+    if(currentQuestion>=questions[currentLevel].length){
+        alert("Quiz Finished! Total Score: "+score);
+        exitQuiz();
+    }else{
+        loadQuestion();
+    }
+}
+
+// ===== SKIP =====
+function skipQuestion(){
+    if(points>=10){
+        points-=10;
+        document.getElementById('points').innerText=points;
+        showPopup("-10");
+        clearInterval(timer);
+        nextQuestion();
+    }else{
+        alert("Not enough points to skip!");
+    }
+}
+
+// ===== WATCH AD =====
+function watchAd(){
+    alert("Watching ad... +20 points (quiz not advanced)");
+    points+=20;
+    document.getElementById('points').innerText=points;
+    showPopup("+20");
+}
+
+// ===== POPUP =====
+function showPopup(text){
+    const card=document.querySelector('.question-card');
+    const popup=document.createElement('div');
+    popup.className='point-popup';
+    popup.innerText=text;
+    card.appendChild(popup);
+    setTimeout(()=>popup.remove(),800);
+}
+
+// ===== EXIT QUIZ =====
+function exitQuiz(){
+    clearInterval(timer);
+    document.querySelector('.quiz-interface').classList.remove('active');
+    document.querySelector('.main-menu').classList.add('active');
+    score=0;
+    document.getElementById('score').innerText=score;
+}
+
+// ===== STORE =====
+function openStore(){
+    document.querySelector('.main-menu').classList.remove('active');
+    document.querySelector('.store-interface').classList.add('active');
+}
+function buyTemplate(bg){
+    let cost=bg==='bg1'?50:80;
+    if(points>=cost){
+        points-=cost;
+        templates[bg]=true;
+        document.body.style.backgroundImage=bg==='bg1'?'url(https://i.postimg.cc/8c1xXvTn/bg1.jpg)':'url(https://i.postimg.cc/Gh8zC0ZY/bg2.jpg)';
+        document.getElementById('points').innerText=points;
+        alert("Template purchased!");
+    }else{alert("Not enough points!");}
+}
+function backToMenu(){
+    document.querySelector('.store-interface').classList.remove('active');
+    document.querySelector('.main-menu').classList.add('active');
+}
+</script>
 </body>
-</html>
+        </html>
