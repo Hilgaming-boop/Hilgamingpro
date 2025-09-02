@@ -8,7 +8,7 @@
 body {
     margin:0;
     font-family: Arial, sans-serif;
-    background-color: #111;
+    background-color:#111;
     color:#fff;
     display:flex;
     flex-direction:column;
@@ -76,6 +76,19 @@ button:hover{transform:scale(1.05);}
     0%{opacity:1;transform:translate(-50%,0);}
     100%{opacity:0;transform:translate(-50%,-50px);}
 }
+.confetti {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: gold;
+    opacity: 0.9;
+    animation: confettiFall 1s forwards;
+}
+@keyframes confettiFall {
+    0% {transform: translateY(0) rotate(0deg);}
+    100% {transform: translateY(100px) rotate(360deg); opacity:0;}
+}
+.progress-text {margin-bottom:10px;font-weight:bold;}
 </style>
 </head>
 <body>
@@ -88,11 +101,13 @@ button:hover{transform:scale(1.05);}
     <button onclick="startQuiz('expert')">Play Expert</button>
     <button onclick="openStore()">Template Store</button>
     <div>Points: <span id="points">100</span></div>
+    <div>Highest Score: <span id="highScore">0</span></div>
 </div>
 
 <!-- QUIZ INTERFACE -->
 <div class="quiz-interface">
     <div class="question-card">
+        <div class="progress-text" id="progressText">Question 1/1</div>
         <div class="timer-bar" id="timerBar"></div>
         <h2 id="question">Question text</h2>
         <div class="answers">
@@ -118,7 +133,9 @@ button:hover{transform:scale(1.05);}
     <button onclick="backToMenu()">Back to Menu</button>
 </div>
 
-<audio id="correctSound" src="https://freesound.org/data/previews/320/320181_5260877-lq.mp3"></audio>
+<audio id="correctEasy" src="https://freesound.org/data/previews/320/320181_5260877-lq.mp3"></audio>
+<audio id="correctMedium" src="https://freesound.org/data/previews/414/414209_5121236-lq.mp3"></audio>
+<audio id="correctExpert" src="https://freesound.org/data/previews/41/41539_102265-lq.mp3"></audio>
 <audio id="wrongSound" src="https://freesound.org/data/previews/109/109662_945474-lq.mp3"></audio>
 <audio id="timeUpSound" src="https://freesound.org/data/previews/331/331912_3248244-lq.mp3"></audio>
 
@@ -130,7 +147,10 @@ let currentLevel = '';
 let templates = {};
 let timer;
 let timeLeft;
-const maxTime = 15;
+const maxTime=15;
+
+let highScore = localStorage.getItem('highScore') || 0;
+document.getElementById('highScore').innerText = highScore;
 
 let questions = {
     easy:[
@@ -162,6 +182,7 @@ function loadQuestion(){
     clearInterval(timer);
     timeLeft=maxTime;
     document.getElementById('timerBar').style.width="100%";
+    document.getElementById('progressText').innerText=`Question ${currentQuestion+1}/${questions[currentLevel].length}`;
     timer=setInterval(updateTimer,1000);
 
     let q=questions[currentLevel][currentQuestion];
@@ -189,7 +210,8 @@ function answer(i){
     if(i===q.correct){
         score+=getReward();
         showPopup("+"+getReward());
-        document.getElementById('correctSound').play();
+        playLevelSound();
+        showConfetti();
     }else{
         deductPoints(getPenalty());
         showPopup("-"+getPenalty());
@@ -209,9 +231,10 @@ function nextQuestion(){
     currentQuestion++;
     if(currentQuestion>=questions[currentLevel].length){
         alert("Quiz Finished! Total Score: "+score);
+        if(score>highScore){highScore=score;localStorage.setItem('highScore',highScore);document.getElementById('highScore').innerText=highScore;}
         exitQuiz();
     }else{
-        loadQuestion();
+        fadeOutIn(loadQuestion);
     }
 }
 
@@ -223,9 +246,7 @@ function skipQuestion(){
         showPopup("-10");
         clearInterval(timer);
         nextQuestion();
-    }else{
-        alert("Not enough points to skip!");
-    }
+    }else{alert("Not enough points to skip!");}
 }
 
 // ===== WATCH AD =====
@@ -246,20 +267,39 @@ function showPopup(text){
     setTimeout(()=>popup.remove(),800);
 }
 
-// ===== EXIT QUIZ =====
-function exitQuiz(){
-    clearInterval(timer);
-    document.querySelector('.quiz-interface').classList.remove('active');
-    document.querySelector('.main-menu').classList.add('active');
-    score=0;
-    document.getElementById('score').innerText=score;
+// ===== CONFETTI =====
+function showConfetti(){
+    const card=document.querySelector('.question-card');
+    for(let i=0;i<10;i++){
+        const c=document.createElement('div');
+        c.className='confetti';
+        c.style.left=Math.random()*100+"%";
+        card.appendChild(c);
+        setTimeout(()=>c.remove(),1000);
+    }
 }
 
-// ===== STORE =====
-function openStore(){
-    document.querySelector('.main-menu').classList.remove('active');
-    document.querySelector('.store-interface').classList.add('active');
+// ===== LEVEL SOUND =====
+function playLevelSound(){
+    let audio=document.getElementById(currentLevel==='easy'?'correctEasy':currentLevel==='medium'?'correctMedium':'correctExpert');
+    audio.play();
 }
+
+// ===== FADE OUT/IN =====
+function fadeOutIn(callback){
+    const card=document.querySelector('.question-card');
+    card.style.opacity=0;
+    setTimeout(()=>{
+        callback();
+        card.style.opacity=1;
+    },300);
+}
+
+// ===== EXIT QUIZ =====
+function exitQuiz(){clearInterval(timer);document.querySelector('.quiz-interface').classList.remove('active');document.querySelector('.main-menu').classList.add('active');score=0;document.getElementById('score').innerText=score;}
+
+// ===== STORE =====
+function openStore(){document.querySelector('.main-menu').classList.remove('active');document.querySelector('.store-interface').classList.add('active');}
 function buyTemplate(bg){
     let cost=bg==='bg1'?50:80;
     if(points>=cost){
@@ -270,10 +310,7 @@ function buyTemplate(bg){
         alert("Template purchased!");
     }else{alert("Not enough points!");}
 }
-function backToMenu(){
-    document.querySelector('.store-interface').classList.remove('active');
-    document.querySelector('.main-menu').classList.add('active');
-}
+function backToMenu(){document.querySelector('.store-interface').classList.remove('active');document.querySelector('.main-menu').classList.add('active');}
 </script>
 </body>
-        </html>
+</html>
